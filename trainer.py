@@ -104,7 +104,7 @@ class Trainer:
         self.highscore_epoch = 1
 
     def train(self, net, train_producer, test_producer, epochs=420,
-              lr_dict={1:1e-4, 20:1e-3, 40:1e-4, 200:1e-5, 3:1e-6},
+              lr_dict={1:1e-4, 20:1e-3, 40:1e-4, 200:1e-5, 700:1e-6},
               gpu_id=0, useAdam=True, log2file=True):
 
         log = None

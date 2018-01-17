@@ -52,4 +52,4 @@ if use_cuda:
 
 trainer = T.Trainer('saved/'+name, class_weight=[1, 1, 1],
                     dryrun=args.debug)
-trainer(net, train_producer, test_producer, gpu_id=0, useAdam=True)
+trainer(net, train_producer, test_producer, gpu_id=0, useAdam=True, epochs=1200)

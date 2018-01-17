@@ -12,10 +12,12 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='PyTorch AF-detector Training')
-parser.add_argument('--debug', '-r', action='store_true', help='print stats')
+parser.add_argument('--debug', '-d', action='store_true', help='print stats')
 parser.add_argument('--arch', '-a', default='vgg16_bn')
+parser.add_argument('--gpu_id', default=0, type=int)
 args = parser.parse_args()
 
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 torch.multiprocessing.set_sharing_strategy('file_system')
 #name = splitext(basename(sys.argv[0]))[0]
 name = args.arch

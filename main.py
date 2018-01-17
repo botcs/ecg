@@ -1,18 +1,31 @@
 #! /usr/bin/python3.5
 import torch
+import torch.backends.cudnn as cudnn
+
 import data_handler
-from models import vgg16
+import models
 import trainer as T
+
 import sys, os
 from os.path import basename, splitext
+import argparse
+
+
+parser = argparse.ArgumentParser(description='PyTorch AF-detector Training')
+parser.add_argument('--debug', '-r', action='store_true', help='print stats')
+parser.add_argument('--arch', '-a', default='vgg16_bn')
+args = parser.parse_args()
 
 torch.multiprocessing.set_sharing_strategy('file_system')
-name = splitext(basename(sys.argv[0]))[0]
+#name = splitext(basename(sys.argv[0]))[0]
+name = args.arch
 
 transformations = [
     data_handler.Crop(2400),
     data_handler.RandomMultiplier(-1),
 ]
+
+use_cuda = torch.cuda.is_available()
 
 dataset = data_handler.DataSet(
     'data/REFERENCE.csv', data_handler.load_composed,
@@ -27,12 +40,14 @@ train_producer = torch.utils.data.DataLoader(
 test_producer = torch.utils.data.DataLoader(
         dataset=eval_set, batch_size=32, shuffle=True,
         num_workers=8, collate_fn=data_handler.batchify)
+print("=> Building model %30s"%(args.arch))
+net = models.__dict__[args.arch](in_channels=1, num_classes=3)
 
-net = vgg16(in_channels=1, num_classes=3)
+if use_cuda:
+    net.cuda()
+    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+    cudnn.benchmark = True
 
-DRYRUN = '--dryrun' in sys.argv
-RESTORE = '--restore' in sys.argv
-print('DRYRUN:', DRYRUN)
-
-trainer = T.Trainer('saved/'+name, class_weight=[1, 1, 1], dryrun=DRYRUN, restore=True)
+trainer = T.Trainer('saved/'+name, class_weight=[1, 1, 1],
+                    dryrun=args.debug)
 trainer(net, train_producer, test_producer, gpu_id=0, useAdam=True)

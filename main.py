@@ -17,7 +17,7 @@ parser.add_argument('--arch', '-a', default='vgg16_bn')
 parser.add_argument('--gpu_id', default=0, type=int)
 args = parser.parse_args()
 
-os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
 torch.multiprocessing.set_sharing_strategy('file_system')
 #name = splitext(basename(sys.argv[0]))[0]
 name = args.arch

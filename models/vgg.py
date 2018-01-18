@@ -11,7 +11,7 @@ __all__ = [
     'vgg11', 'vgg11_bn',
     'vgg13', 'vgg13_bn',
     'vgg16', 'vgg16_bn', 'dil_vgg16_bn', 'dil_vgg16_bn_selu',
-    'vgg19_bn', 'vgg19', 'dil_vgg19_bn', 'dil_vgg19_bn_selu',
+    'vgg19_bn', 'vgg19', 'dil_vgg19_bn', 'dil_vgg19_bn_selu', 'dil_vgg19_bn_selu_halved',
 ]
 
 
@@ -87,6 +87,7 @@ cfg = {
     'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
     'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+    'F': [32, 32, 'M', 64, 64, 'M', 128, 128, 128, 128, 'M', 256, 256, 256, 256, 'M', 256, 256, 256, 256, 'M'],
 }
 
 
@@ -250,6 +251,20 @@ def dil_vgg19_bn_selu(in_channels=1, pretrained=False, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
     model = VGG(make_layers(cfg['E'], batch_norm=True, in_channels=in_channels,
+                            dilated=True, selu=True), **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg19_bn_selu']))
+    return model
+
+def dil_vgg19_bn_selu_halved(in_channels=1, pretrained=False, **kwargs):
+    """VGG 19-layer model (configuration 'E') with batch normalization
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfg['F'], batch_norm=True, in_channels=in_channels,
                             dilated=True, selu=True), **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg19_bn_selu']))

@@ -36,6 +36,8 @@ dataset = data_handler.DataSet(
     remove_noise=True, tokens='NAO')
 train_set, eval_set = dataset.disjunct_split(.9)
 
+eval_set.transformations = []
+
 train_producer = torch.utils.data.DataLoader(
         dataset=train_set, batch_size=32, shuffle=True,
         num_workers=16, collate_fn=data_handler.batchify)

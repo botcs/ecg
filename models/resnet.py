@@ -139,7 +139,7 @@ class ResNet(nn.Module):
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             if self.dilated:
-                layers.append(block(self.inplanes, planes, dilation_factor=2**i))    
+                layers.append(block(self.inplanes, planes, dilation_factor=2**i))
             layers.append(block(self.inplanes, planes))
 
         return nn.Sequential(*layers)

@@ -223,7 +223,8 @@ class Trainer:
         if log2file:
             print('Finished training!\n  Total time: %10.2f'%(epoch_t_sum/60))
             print('  Highscore: %.4f @ %05d epoch' % (self.test_highscore, self.highscore_epoch))
-            log.close()
+            if not dryrun:
+                log.close()
         return self.losses, self.train_F1, self.test_F1
 
     def plot(self, ema_loss=.1, ema_train_f1=.1, ema_test_f1=.8, filename=None):

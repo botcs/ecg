@@ -7,8 +7,11 @@ import math
 
 
 __all__ = [
-    'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
-    'vgg19_bn', 'vgg19',
+    'VGG',
+    'vgg11', 'vgg11_bn',
+    'vgg13', 'vgg13_bn',
+    'vgg16', 'vgg16_bn', 'dil_vgg16_bn', 'dil_vgg16_bn_selu',
+    'vgg19_bn', 'vgg19', 'dil_vgg19_bn', 'dil_vgg19_bn_selu',
 ]
 
 
@@ -57,18 +60,25 @@ class VGG(nn.Module):
                 m.bias.data.zero_()
 
 
-def make_layers(cfg, batch_norm=False, in_channels=1):
+def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False):
     layers = []
+    dilated_factor=1
+    def act_fn():
+        return nn.SELU(inplace=True) if selu else nn.ReLU(inplace=True)
     for v in cfg:
         if v == 'M':
+            dilated_factor = 1
             layers += [nn.MaxPool1d(kernel_size=2, stride=2)]
         else:
-            conv1d = nn.Conv1d(in_channels, v, kernel_size=3, padding=1)
+            conv1d = nn.Conv1d(in_channels, v, kernel_size=3, padding=1,
+                               dilation=dilated_factor)
             if batch_norm:
-                layers += [conv1d, nn.BatchNorm1d(v), nn.ReLU(inplace=True)]
+                layers += [conv1d, nn.BatchNorm1d(v), act_fn()]
             else:
-                layers += [conv1d, nn.ReLU(inplace=True)]
+                layers += [conv1d, act_fn()]
             in_channels = v
+            if dilated:
+                dilated_factor *= 2
     return nn.Sequential(*layers)
 
 
@@ -163,6 +173,33 @@ def vgg16_bn(in_channels=1, pretrained=False, **kwargs):
         model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
     return model
 
+def dil_vgg16_bn(in_channels=1, pretrained=False, **kwargs):
+    """VGG 16-layer model (configuration "D") with batch normalization
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfg['D'], batch_norm=True, in_channels=in_channels, dilated=True), **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg16_bn']))
+    return model
+
+def dil_vgg16_bn_selu(in_channels=1, pretrained=False, **kwargs):
+    """VGG 19-layer model (configuration 'E') with batch normalization
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfg['E'], batch_norm=True, in_channels=in_channels,
+                            dilated=True, selu=True), **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg19_bn_selu']))
+    return model
+
 
 def vgg19(in_channels=1, pretrained=False, **kwargs):
     """VGG 19-layer model (configuration "E")
@@ -189,4 +226,31 @@ def vgg19_bn(in_channels=1, pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['E'], batch_norm=True, in_channels=in_channels), **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['vgg19_bn']))
+    return model
+
+def dil_vgg19_bn(in_channels=1, pretrained=False, **kwargs):
+    """VGG 19-layer model (configuration 'E') with batch normalization
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfg['E'], batch_norm=True, in_channels=in_channels, dilated=True), **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg19_bn']))
+    return model
+
+def dil_vgg19_bn_selu(in_channels=1, pretrained=False, **kwargs):
+    """VGG 19-layer model (configuration 'E') with batch normalization
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    if pretrained:
+        kwargs['init_weights'] = False
+    model = VGG(make_layers(cfg['E'], batch_norm=True, in_channels=in_channels,
+                            dilated=True, selu=True), **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['dil_vgg19_bn_selu']))
     return model

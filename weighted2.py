@@ -38,10 +38,10 @@ train_set, eval_set = dataset.disjunct_split(.9)
 
 train_producer = torch.utils.data.DataLoader(
         dataset=train_set, batch_size=32, shuffle=True,
-        num_workers=16, collate_fn=data_handler.batchify)
+        num_workers=8, collate_fn=data_handler.batchify)
 test_producer = torch.utils.data.DataLoader(
         dataset=eval_set, batch_size=32, shuffle=True,
-        num_workers=16, collate_fn=data_handler.batchify)
+        num_workers=8, collate_fn=data_handler.batchify)
 print("=> Building model %30s"%(args.arch))
 net = models.__dict__[args.arch](in_channels=1, num_classes=3)
 
@@ -50,8 +50,6 @@ if use_cuda:
     net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
     cudnn.benchmark = True
 
-trainer = T.Trainer('saved/'+name, class_weight=[1, 1, 1],
+trainer = T.Trainer('saved/'+name, class_weight=[1, 5, 3],
                     dryrun=args.debug)
-if args.debug:
-    print(net)
 trainer(net, train_producer, test_producer, gpu_id=0, useAdam=True, epochs=1200)

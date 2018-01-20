@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.utils.model_zoo as model_zoo
 
-__all__ = ['stanford_net']
+__all__ = ['stanford_net', 'stanford_selu']
 
 def conv(in_channels, out_channels, stride=1, dilation=1):
     return nn.Conv1d(in_channels, out_channels, kernel_size=15,
@@ -105,7 +105,7 @@ class ResNet(nn.Module):
         self.conv1 = nn.Conv1d(in_channels, self.inplanes, kernel_size=15,
                                stride=1, padding=7, bias=False)
         self.bn1 = nn.BatchNorm1d(self.inplanes)
-        self.act = nn.ReLU(inplace=True) if selu else nn.SELU(inplace=True)
+        self.act = nn.SELU(inplace=True) if selu else nn.ReLU(inplace=True)
 
         self.pool = nn.MaxPool1d(2)
         self.conv2 = nn.Conv1d(self.inplanes, self.inplanes, kernel_size=15, stride=2, padding=7, bias=False)
@@ -175,4 +175,8 @@ class ResNet(nn.Module):
 
 def stanford_net(pretrained=False, **kwargs):
     model = ResNet(PreactBlock, [3, 4, 4, 4], **kwargs)
+    return model
+
+def stanford_selu(pretrained=False, **kwargs):
+    model = ResNet(PreactBlock, [3, 4, 4, 4], selu=True, **kwargs)
     return model

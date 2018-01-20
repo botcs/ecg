@@ -58,6 +58,46 @@ class BasicBlock(nn.Module):
         return out
 
 
+class PreactBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None,
+                 dilation_factor=1, selu=False):
+        super(PreactBlock, self).__init__()
+
+        self.bn1 = nn.BatchNorm1d(inplanes)
+        self.act = nn.ReLU(inplace=True) if selu else nn.SELU(inplace=True)
+        self.drop1 = nn.Dropout(p=0.5)
+        self.conv1 = conv3(inplanes, planes, stride, dilation=1)
+
+        self.bn2 = nn.BatchNorm1d(planes)
+        self.drop2 = nn.Dropout(p=0.5)
+        self.conv2 = conv3(planes, planes, dilation=dilation_factor)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        x = self.bn1(x)
+        x = self.act(x)
+        x = self.drop1(x)
+        x = self.conv1(x)
+
+        x = self.bn2(x)
+        x = self.act(x)
+        x = self.drop2(x)
+        x = self.conv2(x)
+
+        if self.downsample is not None:
+            residual = self.downsample(residual)
+        
+        x += residual
+        x = self.act(x)
+
+        return x
+
+        
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -139,7 +179,7 @@ class ResNet(nn.Module):
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             if self.dilated:
-                layers.append(block(self.inplanes, planes, dilation_factor=2**i))
+                layers.append(block(self.inplanes, planes, dilation_factor=2))
             layers.append(block(self.inplanes, planes))
 
         return nn.Sequential(*layers)
@@ -177,7 +217,7 @@ def dil_resnet18(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], dilated=True, **kwargs)
+    model = ResNet(PreactBlock, [2, 2, 2, 2], dilated=True, **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model

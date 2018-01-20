@@ -34,7 +34,7 @@ class VGG(nn.Module):
         self.features = features
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Conv1d(512, num_classes, 7)
+            nn.Conv1d(self.features[-4].out_channels, num_classes, 7)
         )
         if init_weights:
             self._initialize_weights()

@@ -35,8 +35,9 @@ def load_mat(ref, normalize=True):
 class DataSet(th.utils.data.Dataset):
     def __init__(self, elems, load, path=None,
                  remove_unlisted=False, tokens=def_tokens,
-                 equal_batch=False, **kwargs):
+                 equal_batch=False, transformations=None, **kwargs):
         num_classes = len(tokens)
+        self.num_classes = num_classes
         super(DataSet, self).__init__()
 
         if isinstance(elems, str):
@@ -58,7 +59,7 @@ class DataSet(th.utils.data.Dataset):
             label = elem.split(',')[1]
             self.class_lists[tokens.find(label)].append(elem)
 
-
+        self.transformations = transformations
         self.remove_unlisted = remove_unlisted
         self.load = load
         self.path = path
@@ -83,9 +84,11 @@ class DataSet(th.utils.data.Dataset):
             ref = self.class_lists[class_idx][idx]
 
         if self.path is not None:
-            return self.load("%s/%s" % (self.path, ref), tokens=self.tokens, **self.loadargs)
+            return self.load("%s/%s" % (self.path, ref), tokens=self.tokens, 
+                             transformations=self.transformations)
 
-        return self.load(self.list[idx], tokens=self.tokens, **self.loadargs)
+        return self.load(self.list[idx], tokens=self.tokens, 
+                         transformations=self.transformations)
 
     def disjunct_split(self, ratio=.8):
         # Split keeps the ratio of classes
@@ -95,9 +98,9 @@ class DataSet(th.utils.data.Dataset):
         B = set(self.list) - A
 
         A = DataSet(A, self.load, self.path, self.remove_unlisted,
-                    self.tokens, **self.loadargs)
+                    self.tokens, self.equal_batch, self.transformations, **self.loadargs)
         B = DataSet(B, self.load, self.path, self.remove_unlisted,
-                    self.tokens, **self.loadargs)
+                    self.tokens, self.equal_batch, self.transformations, **self.loadargs)
         return A, B
 
 ### Transformations
@@ -137,10 +140,10 @@ class RandomMultiplier:
 
 class Logarithm:
     def __call__(self, data):
-        return np.log(data)
+        return np.log(np.abs(data)+1e-8)
 
 
-class Spectogram:
+class Spectrogram:
     def __init__(self, NFFT=None, overlap=None):
         self.NFFT = NFFT
         self.overlap = overlap
@@ -155,7 +158,7 @@ class Spectogram:
             nperseg=self.NFFT,
             noverlap=self.overlap)[-1]
         Sx = signal.resample(Sx, length, axis=1)
-        return Sx[0]
+        return Sx
 ### Transformations
 
 
@@ -164,9 +167,11 @@ def load_composed(line, tokens=def_tokens, transformations=[], **kwargs):
     data = load_mat(ref)
     for trans in transformations:
         data = trans(data)
-
+    
+    if len(data.shape) == 1:
+        data = data[None, :]
     res = {
-        'x': th.from_numpy(np.float32(data[None, :])),
+        'x': th.from_numpy(np.float32(data)),
         #'features': th.from_numpy(data[None, :]),
         'y': tokens.find(label)}
     return res

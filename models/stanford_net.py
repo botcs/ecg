@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.utils.model_zoo as model_zoo
 
-__all__ = ['stanford_net', 'stanford_selu']
+__all__ = ['stanford_net', 'stanford_selu', 'stanford_18', 'stanford_20']
 
 def conv(in_channels, out_channels, stride=1, dilation=1):
     return nn.Conv1d(in_channels, out_channels, kernel_size=15,
@@ -180,3 +180,12 @@ def stanford_net(pretrained=False, **kwargs):
 def stanford_selu(pretrained=False, **kwargs):
     model = ResNet(PreactBlock, [3, 4, 4, 4], selu=True, **kwargs)
     return model
+
+def stanford_18(pretrained=False, **kwargs):
+    model = ResNet(PreactBlock, [3, 4, 4, 6], **kwargs)
+    return model
+
+def stanford_20(pretrained=False, **kwargs):
+    model = ResNet(PreactBlock, [3, 4, 6, 6], **kwargs)
+    return model
+

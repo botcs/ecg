@@ -105,3 +105,4 @@ dry/
 *.zip
 *.csv
 saved/
+*.out

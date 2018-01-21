@@ -7,7 +7,6 @@ import models
 import trainer as T
 
 import sys, os
-from os.path import basename, splitext
 import argparse
 
 

@@ -56,12 +56,12 @@ class PreactBlock(nn.Module):
 
         self.bn1 = nn.BatchNorm1d(in_channels)
         self.act = act
-
-        self.drop1 = nn.Dropout()
+        use_selu = type(act) == torch.nn.modules.activation.SELU
+        self.drop1 = nn.AlphaDropout() if use_selu else nn.Dropout()
         self.conv1 = conv(in_channels, out_channels, stride, dilation=1)
 
         self.bn2 = nn.BatchNorm1d(out_channels)
-        self.drop2 = nn.Dropout()
+        self.drop2 = nn.AlphaDropout() if use_selu else nn.Dropout()
         self.conv2 = conv(out_channels, out_channels, dilation=dilation_factor)
         self.downsample = nn.MaxPool1d(stride, ceil_mode=True) if stride != 1 else None
         self.skip_connection = lambda x: x
@@ -110,7 +110,7 @@ class ResNet(nn.Module):
         self.pool = nn.MaxPool1d(2)
         self.conv2 = nn.Conv1d(self.inplanes, self.inplanes, kernel_size=15, stride=2, padding=7, bias=False)
         self.bn2 = nn.BatchNorm1d(self.inplanes)
-        self.drop1 = nn.Dropout(p=0.9)
+        self.drop1 = nn.AlphaDropout() if selu else nn.Dropout()
         self.conv3 = nn.Conv1d(self.inplanes, self.inplanes, 15, padding=7, bias=False, dilation=self.dilation_factor)
 
 
@@ -118,11 +118,13 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, inplanes*2, layers[1], stride=2)
         self.layer3 = self._make_layer(block, inplanes*3, layers[2], stride=2)
         self.layer4 = self._make_layer(block, inplanes*4, layers[3], stride=2)
-        final_conv = nn.Conv1d(inplanes*4*block.expansion, num_classes, 1)
+        self.num_features = inplanes * 4 * block.expansion
+        final_conv = nn.Conv1d(self.num_features, num_classes, 1)
         self.classifier = nn.Sequential(
             nn.BatchNorm1d(inplanes*4*block.expansion),
             self.act,
-            final_conv
+            final_conv,
+            nn.AdaptiveAvgPool1d(1)
         )
 
         for m in self.modules():
@@ -170,8 +172,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.classifier(x)
-        logit = x.mean(-1)
-        return logit
+        return x.squeeze()
 
 def stanford_net(pretrained=False, **kwargs):
     model = ResNet(PreactBlock, [3, 4, 4, 4], **kwargs)
@@ -188,4 +189,3 @@ def stanford_18(pretrained=False, **kwargs):
 def stanford_20(pretrained=False, **kwargs):
     model = ResNet(PreactBlock, [3, 4, 6, 6], **kwargs)
     return model
-

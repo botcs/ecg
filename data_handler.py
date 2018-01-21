@@ -1,6 +1,5 @@
 from scipy.io import loadmat
 import numpy as np
-#from matplotlib.mlab import specgram
 from scipy import signal
 import torch as th
 import random
@@ -45,7 +44,7 @@ class DataSet(th.utils.data.Dataset):
                 self.list = [line.replace('\n', '') for line in f]
         else:
             # just assume iterable
-            self.list = set(elems)
+            self.list = list(elems)
 
         if kwargs.get('remove_noise'):
             self.list = [elem for elem in self.list if elem.find('~') == -1]
@@ -64,7 +63,6 @@ class DataSet(th.utils.data.Dataset):
         self.load = load
         self.path = path
         self.tokens = tokens
-        self.loadargs = kwargs
         self.equal_batch = equal_batch
 
     def __len__(self):
@@ -84,10 +82,10 @@ class DataSet(th.utils.data.Dataset):
             ref = self.class_lists[class_idx][idx]
 
         if self.path is not None:
-            return self.load("%s/%s" % (self.path, ref), tokens=self.tokens, 
+            return self.load("%s/%s" % (self.path, ref), tokens=self.tokens,
                              transformations=self.transformations)
 
-        return self.load(self.list[idx], tokens=self.tokens, 
+        return self.load(self.list[idx], tokens=self.tokens,
                          transformations=self.transformations)
 
     def disjunct_split(self, ratio=.8):
@@ -98,12 +96,32 @@ class DataSet(th.utils.data.Dataset):
         B = set(self.list) - A
 
         A = DataSet(A, self.load, self.path, self.remove_unlisted,
-                    self.tokens, self.equal_batch, self.transformations, **self.loadargs)
+                    self.tokens, self.equal_batch, self.transformations)
         B = DataSet(B, self.load, self.path, self.remove_unlisted,
-                    self.tokens, self.equal_batch, self.transformations, **self.loadargs)
+                    self.tokens, self.equal_batch, self.transformations)
         return A, B
 
+    def save(self, fname):
+        with open(fname, 'w') as f:
+            f.writelines("%s\n" % l for l in self.list)
+
 ### Transformations
+class Fork():
+    def __init__(self, transform_dict):
+        self.transform_dict = transform_dict
+
+    def __call__(self, data):
+        result = {}
+        for fork_name, transformations in self.transform_dict.items():
+            fork_data = data
+            for trans in transformations:
+                fork_data = trans(fork_data)
+            result[fork_name] = fork_data
+        return result
+
+
+
+
 class Crop:
     def __init__(self, crop_len):
         self.crop_len = crop_len
@@ -167,7 +185,7 @@ def load_composed(line, tokens=def_tokens, transformations=[], **kwargs):
     data = load_mat(ref)
     for trans in transformations:
         data = trans(data)
-    
+
     if len(data.shape) == 1:
         data = data[None, :]
     res = {
@@ -195,23 +213,23 @@ def batchify(batch):
     return res
 
 
-def load_forked(line, global_transforms, fork_transforms, tokens=def_tokens, **kwargs):
+def load_forked(line, tokens=def_tokens, transformations=[], **kwargs):
     ref, label = line.split(',')
-    in_data = load_mat(ref)
-    for trans in global_transforms:
-        in_data = trans(in_data)
-    forks = {}
-    for forkname, transforms in fork_transforms.items():
-        data = in_data.copy()
-        for trans in transforms:
-            data = trans(data)
-        assert len(data.shape) < 3, data.shape
-        if len(data.shape) == 1:
-            data = data[None, :]
-        forks[forkname] = {
-            'x': th.from_numpy(np.float32(data)),
-            'y': tokens.find(label)}
-    return forks
+    data = load_mat(ref)
+
+    for trans in transformations:
+        data = trans(data)
+    res = {}
+    for forkname, fork_data in data.items():
+        assert fork_data.shape, len(fork_data.shape) < 3
+        if len(fork_data.shape) == 1:
+            fork_data = fork_data[None, :]
+        res[forkname] = {
+            'x':th.from_numpy(np.float32(fork_data)),
+            'y': tokens.find(label)
+        }
+
+    return res
 
 def batchify_forked(batch):
     forked_res = {}

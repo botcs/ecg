@@ -57,11 +57,17 @@ def ema_list(series, alpha=0.001):
 def evaluate(net, test_producer, gpu_id):
     net.eval()
     for i, data in enumerate(test_producer, 1):
-        outputs = net(data['x'].cuda(gpu_id))
+
+        input = data['x']
+        if not isinstance(data['x'], dict):
+            input = data['x'].cuda(gpu_id)
+        label = data['y']
+
+        outputs = net(input)
         if i == 1:
-            acc_sum = accuracy(outputs.data, data['y'].data)
+            acc_sum = accuracy(outputs.data, label.data)
         else:
-            acc_sum += accuracy(outputs.data, data['y'].data)
+            acc_sum += accuracy(outputs.data, label.data)
 
     acc = acc_sum / i
     return acc
@@ -149,7 +155,9 @@ class Trainer:
                 start_t = time.time()
 
                 optimizer.zero_grad()
-                input = data['x'].cuda(gpu_id)
+                input = data['x']
+                if not isinstance(data['x'], dict):
+                    input = data['x'].cuda(gpu_id)
                 label = data['y'].cuda(gpu_id)
                 outputs = net.forward(input)
 

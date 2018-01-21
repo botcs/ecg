@@ -32,9 +32,11 @@ class VGG(nn.Module):
     def __init__(self, features, num_classes=3, init_weights=True):
         super(VGG, self).__init__()
         self.features = features
+        self.num_features = self.features[-4].out_channels
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Conv1d(self.features[-4].out_channels, num_classes, 7)
+            nn.Conv1d(self.num_features, num_classes, 7),
+            nn.AdaptiveAvgPool1d(1)
         )
         if init_weights:
             self._initialize_weights()
@@ -42,8 +44,7 @@ class VGG(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.classifier(x)
-        logits = x.mean(-1)
-        return logits
+        return x.squeeze()
 
     def _initialize_weights(self):
         for m in self.modules():

@@ -81,12 +81,13 @@ class SqueezeNet(nn.Module):
                 Fire(512, 64, 256, 256),
             )
         # Final convolution is initialized differently form the rest
-        final_conv = nn.Conv1d(512, self.num_classes, kernel_size=1)
+        self.num_features = 512
+        final_conv = nn.Conv1d(self.num_features, self.num_classes, kernel_size=1)
         self.classifier = nn.Sequential(
             nn.Dropout(p=0.5),
             final_conv,
             nn.ReLU(inplace=True),
-            nn.AvgPool1d(13, stride=1)
+            nn.AdaptiveAvgPool1d(1)
         )
 
         for m in self.modules():
@@ -101,8 +102,7 @@ class SqueezeNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.classifier(x)
-        logit = x.mean(-1)
-        return logit
+        return x.squeeze()
 
 
 def squeezenet1_0(pretrained=False, **kwargs):

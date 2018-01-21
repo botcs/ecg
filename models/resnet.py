@@ -91,13 +91,13 @@ class PreactBlock(nn.Module):
 
         if self.downsample is not None:
             residual = self.downsample(residual)
-        
+
         x += residual
         x = self.act(x)
 
         return x
 
-        
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -152,9 +152,11 @@ class ResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.num_features = 512 * block.expansion
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Conv1d(512 * block.expansion, num_classes, 7)
+            nn.Conv1d(self.num_features, num_classes, 7),
+            nn.AdaptiveAvgPool1d(1)
         )
 
         for m in self.modules():
@@ -196,8 +198,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.classifier(x)
-        logit = x.mean(-1)
-        return logit
+        return x.squeeze()
 
 
 def resnet18(pretrained=False, **kwargs):

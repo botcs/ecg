@@ -9,6 +9,10 @@ import trainer as T
 import sys, os
 import argparse
 
+seed = 42
+torch.manual_seed(seed)
+if torch.cuda.is_available:
+    torch.cuda.manual_seed_all(seed)
 
 parser = argparse.ArgumentParser(description='PyTorch AF-detector Training')
 parser.add_argument('--spectrogram', '-s', type=int, help='Use spectrogram with [NFFT]')
@@ -48,15 +52,15 @@ use_cuda = torch.cuda.is_available()
 
 train_set = data_handler.DataSet(
     'data/train.csv',
+    load=data_handler.load_composed,
     transformations=train_transformations,
-    data_handler.load_composed,
     path='data/',
     tokens='NAO~')
 
 test_set = data_handler.DataSet(
     'data/test.csv',
+    load=data_handler.load_composed,
     transformations=test_transformations,
-    data_handler.load_composed,
     path='data/',
     tokens='NAO~')
 
@@ -73,14 +77,15 @@ test_producer = torch.utils.data.DataLoader(
         dataset=test_set, batch_size=4, shuffle=True,
         num_workers=4, collate_fn=data_handler.batchify)
 print("=> Building model %30s"%(args.arch))
-net = models.__dict__[args.arch](in_channels=in_channels, num_classes=dataset.num_classes)
+net = models.__dict__[args.arch](in_channels=in_channels, num_classes=train_set.num_classes)
 
 if use_cuda:
     net.cuda()
     # net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
-trainer = T.Trainer('saved/'+name, class_weight=[1, 1, 1], dryrun=args.debug)
+class_weight = [1.] * train_set.num_classes
+trainer = T.Trainer('saved/'+name, class_weight=class_weight, dryrun=args.debug)
 if args.debug:
     print(net)
-trainer(net, train_producer, test_producer, useAdam=True, epochs=1200)
+trainer(net, train_producer, test_producer, useAdam=True, epochs=1000)

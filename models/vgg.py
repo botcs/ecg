@@ -32,9 +32,9 @@ class VGG(nn.Module):
     def __init__(self, features, num_classes=3, init_weights=True):
         super(VGG, self).__init__()
         self.features = features
-        self.num_features = self.features[-4].out_channels
+        self.num_features = 512
         self.classifier = nn.Sequential(
-            nn.Dropout(0.7),
+            nn.Dropout(),
             nn.Conv1d(self.num_features, num_classes, 7),
             nn.AdaptiveAvgPool1d(1)
         )
@@ -77,9 +77,9 @@ def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False)
                                dilation=dilated_factor)
             dropout = drop_fn()
             if batch_norm:
-                layers += [dropout, conv1d, nn.BatchNorm1d(v), act_fn()]
+                layers += [conv1d, nn.BatchNorm1d(v), act_fn(), dropout]
             else:
-                layers += [dropout, conv1d, act_fn()]
+                layers += [conv1d, act_fn(), dropout]
             in_channels = v
             if dilated:
                 dilated_factor *= 2

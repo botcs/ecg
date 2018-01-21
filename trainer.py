@@ -98,7 +98,7 @@ class Trainer:
         if dryrun:
             path = 'dry/' + path
         self.class_weight = th.FloatTensor(class_weight)
-        self.path = load_latest(path) if restore else make_dir(path)
+        self.path = make_dir(path)
         assert os.path.exists(self.path)
         self.losses = []
         self.train_F1 = []
@@ -107,10 +107,12 @@ class Trainer:
         self.highscore_epoch = 1
 
     def train(self, net, train_producer, test_producer, epochs=420,
-              lr_dict={1:5e-4, 10:1e-4, 100:5e-5, 200:1e-5},
+              lr_dict={1:1e-4, 100:5e-5, 200:1e-5},
               gpu_id=None, useAdam=True, log2file=True):
 
         log = None
+        if not self.dryrun and log2file:
+            log = open(self.path+'/log', 'w')
 
         net.cuda(gpu_id)
         criterion = nn.CrossEntropyLoss(self.class_weight.cuda(gpu_id))
@@ -120,6 +122,7 @@ class Trainer:
         else:
             learning_rate = 1e-2
 
+        '''
         if self.restore:
             net.load_state_dict(th.load(self.path+'/state_dict_highscore'))
             highscore_str = '%.4f @ %05d epoch' % (self.test_highscore, self.highscore_epoch)
@@ -127,13 +130,12 @@ class Trainer:
                   'from last highscore:', highscore_str, file=log)
             print('RESTORED: ', datetime.now(),
                   'from last highscore:', highscore_str)
-
-        self.restore = True
+        '''
         last_update_epoch = 0
         for epoch in range(self.highscore_epoch, epochs+1):
             if lr_dict.get(epoch) is not None:
                 learning_rate = lr_dict[epoch]
-                print('#### NEW LEARNING RATE %e ####' % learning_rate)
+                print('#### NEW LEARNING RATE %e ####' % learning_rate, file=log, flush=True)
             if useAdam:
                 optimizer = optim.Adam(net.parameters(), learning_rate,
                                        weight_decay=0.0005)
@@ -166,7 +168,8 @@ class Trainer:
                 acc_sum += self.train_F1[-1]
                 if i % (len(train_producer) // 10) == 0:
                     stat = epoch, i, self.losses[-1], outputs.size()[0]/update_t
-                    print('[%4d, %3d] loss: %5.4f\tsample/sec: %4.1f' % stat, file=log)
+                    print('[%4d, %3d] loss: %5.4f\tsample/sec: %4.1f' % stat,
+                    file=log, flush=True)
 
 
             if self.path and epoch % (epochs // 2) == 0:
@@ -176,22 +179,22 @@ class Trainer:
             if len(self.class_weight) == 3:
                 print('Train acc:\n',
                       'N: %.4f  A: %.4f  O: %.4f  mean: %.4f'%
-                      tuple((acc_sum/i).tolist()[0]), file=log)
+                      tuple((acc_sum/i).tolist()[0]), file=log, flush=True)
             elif len(self.class_weight) == 4:
                 print('Train acc:\n',
                       'N: %.4f  A: %.4f  O: %.4f ~: %.4f  mean: %.4f'%
-                      tuple((acc_sum/i).tolist()[0]), file=log)
+                      tuple((acc_sum/i).tolist()[0]), file=log, flush=True)
             elif len(self.class_weight) == 2:
                  print('Train acc:\n',
                       'Class1: %.4f  Class2: %.4f  mean: %.4f'%
-                      tuple((acc_sum/i).tolist()[0]), file=log)
+                      tuple((acc_sum/i).tolist()[0]), file=log, flush=True)
 
 
             test_acc = evaluate(net, test_producer, gpu_id)
             if test_acc.tolist()[0][-1] > self.test_highscore:
                 self.test_highscore = test_acc.tolist()[0][-1]
                 self.highscore_epoch = epoch
-                with open('result', 'w') as f:
+                with open(self.path+'/result', 'w') as f:
                     f.write('%.4f @ %05d'%(self.test_highscore, self.highscore_epoch))
                 print('<<<< %.4f @ %05d epoch >>>>' % (
                     self.test_highscore, self.highscore_epoch), file=log)

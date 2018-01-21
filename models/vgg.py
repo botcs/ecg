@@ -34,7 +34,7 @@ class VGG(nn.Module):
         self.features = features
         self.num_features = self.features[-4].out_channels
         self.classifier = nn.Sequential(
-            nn.Dropout(),
+            nn.Dropout(0.7),
             nn.Conv1d(self.num_features, num_classes, 7),
             nn.AdaptiveAvgPool1d(1)
         )
@@ -66,6 +66,8 @@ def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False)
     dilated_factor=1
     def act_fn():
         return nn.SELU(inplace=True) if selu else nn.ReLU(inplace=True)
+    def drop_fn(p=0.3):
+        return nn.AlphaDropout(p) if selu else nn.Dropout(p)
     for v in cfg:
         if v == 'M':
             dilated_factor = 1
@@ -73,10 +75,11 @@ def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False)
         else:
             conv1d = nn.Conv1d(in_channels, v, kernel_size=3, padding=1,
                                dilation=dilated_factor)
+            dropout = drop_fn()
             if batch_norm:
-                layers += [conv1d, nn.BatchNorm1d(v), act_fn()]
+                layers += [dropout, conv1d, nn.BatchNorm1d(v), act_fn()]
             else:
-                layers += [conv1d, act_fn()]
+                layers += [dropout, conv1d, act_fn()]
             in_channels = v
             if dilated:
                 dilated_factor *= 2

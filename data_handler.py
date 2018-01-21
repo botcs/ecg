@@ -9,19 +9,7 @@ from torch import optim
 import torchvision
 
 Float = th.FloatTensor
-def_tokens = 'NAO'
-
-
-class mystr(str):
-    def find(self, s):
-        if s == self[0]:
-            return 0
-        return 1
-noise_tokens = mystr('~~')
-atrif_tokens = mystr('AA')
-other_tokens = mystr('OO')
-normal_tokens = mystr('NN')
-
+def_tokens = 'NAO~'
 
 def load_mat(ref, normalize=True):
     mat = loadmat(ref)
@@ -32,8 +20,7 @@ def load_mat(ref, normalize=True):
     return data
 
 class DataSet(th.utils.data.Dataset):
-    def __init__(self, elems, load, path=None,
-                 remove_unlisted=False, tokens=def_tokens,
+    def __init__(self, elems, load, path=None, tokens=def_tokens,
                  equal_batch=False, transformations=None, **kwargs):
         num_classes = len(tokens)
         self.num_classes = num_classes
@@ -46,10 +33,7 @@ class DataSet(th.utils.data.Dataset):
             # just assume iterable
             self.list = list(elems)
 
-        if kwargs.get('remove_noise'):
-            self.list = [elem for elem in self.list if elem.find('~') == -1]
-
-        if remove_unlisted:
+        if set(tokens) != set(def_tokens):
             self.list = [elem for elem in self.list if tokens.find(elem[-1]) != -1]
 
         self.class_lists = [[] for _ in range(num_classes)]
@@ -59,7 +43,6 @@ class DataSet(th.utils.data.Dataset):
             self.class_lists[tokens.find(label)].append(elem)
 
         self.transformations = transformations
-        self.remove_unlisted = remove_unlisted
         self.load = load
         self.path = path
         self.tokens = tokens

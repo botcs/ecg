@@ -92,12 +92,9 @@ def load_latest(save_path):
     return path
 
 class Trainer:
-    def __init__(self, path, class_weight, restore=False, dryrun=False):
+    def __init__(self, path, class_weight, dryrun=False):
 
-        self.restore = restore
         self.dryrun = dryrun
-
-
         if dryrun:
             path = 'dry/' + path
         self.class_weight = th.FloatTensor(class_weight)
@@ -110,15 +107,10 @@ class Trainer:
         self.highscore_epoch = 1
 
     def train(self, net, train_producer, test_producer, epochs=420,
-              lr_dict={1:1e-4, 20:1e-4, 40:5e-5, 200:1e-5, 700:1e-6},
+              lr_dict={1:5e-4, 10:1e-4, 100:5e-5, 200:1e-5},
               gpu_id=None, useAdam=True, log2file=True):
 
         log = None
-        if not self.dryrun and log2file:
-            if self.restore:
-                log = open(self.path + '/log', 'a')
-            else:
-                log = open(self.path + '/log', 'w')
 
         net.cuda(gpu_id)
         criterion = nn.CrossEntropyLoss(self.class_weight.cuda(gpu_id))
@@ -199,6 +191,8 @@ class Trainer:
             if test_acc.tolist()[0][-1] > self.test_highscore:
                 self.test_highscore = test_acc.tolist()[0][-1]
                 self.highscore_epoch = epoch
+                with open('result', 'w') as f:
+                    f.write('%.4f @ %05d'%(self.test_highscore, self.highscore_epoch))
                 print('<<<< %.4f @ %05d epoch >>>>' % (
                     self.test_highscore, self.highscore_epoch), file=log)
                 th.save(net.state_dict(), self.path+'/state_dict_highscore')

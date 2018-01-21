@@ -46,14 +46,20 @@ if args.spectrogram is not None:
 
 use_cuda = torch.cuda.is_available()
 
-dataset = data_handler.DataSet(
-    'data/REFERENCE.csv', data_handler.load_composed,
+train_set = data_handler.DataSet(
+    'data/train.csv',
+    transformations=train_transformations,
+    data_handler.load_composed,
     path='data/',
-    remove_noise=True, tokens='NAO')
-train_set, test_set = dataset.disjunct_split(.9)
+    tokens='NAO~')
 
-train_set.transformations = train_transformations
-test_set.transformations = test_transformations
+test_set = data_handler.DataSet(
+    'data/test.csv',
+    transformations=test_transformations,
+    data_handler.load_composed,
+    path='data/',
+    tokens='NAO~')
+
 
 if args.equal_batch:
     train_set.equal_batch = True
@@ -64,8 +70,8 @@ train_producer = torch.utils.data.DataLoader(
         dataset=train_set, batch_size=32, shuffle=True,
         num_workers=32, collate_fn=data_handler.batchify)
 test_producer = torch.utils.data.DataLoader(
-        dataset=test_set, batch_size=32, shuffle=True,
-        num_workers=32, collate_fn=data_handler.batchify)
+        dataset=test_set, batch_size=4, shuffle=True,
+        num_workers=4, collate_fn=data_handler.batchify)
 print("=> Building model %30s"%(args.arch))
 net = models.__dict__[args.arch](in_channels=in_channels, num_classes=dataset.num_classes)
 

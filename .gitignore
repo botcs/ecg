@@ -106,3 +106,4 @@ dry/
 *.csv
 saved/
 *.out
+3class_ckpt/

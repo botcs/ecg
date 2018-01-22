@@ -99,6 +99,7 @@ class Trainer:
             path = 'dry/' + path
         self.class_weight = th.FloatTensor(class_weight)
         self.path = make_dir(path)
+        self.name = path
         assert os.path.exists(self.path)
         self.losses = []
         self.train_F1 = []
@@ -154,7 +155,6 @@ class Trainer:
                     input = data['x'].cuda(gpu_id)
                 label = data['y'].cuda(gpu_id)
                 outputs = net.forward(input)
-
                 inference_t = time.time() - start_t
                 loss = criterion(outputs, label)
                 loss.backward()
@@ -195,7 +195,11 @@ class Trainer:
                 self.test_highscore = test_acc.tolist()[0][-1]
                 self.highscore_epoch = epoch
                 with open(self.path+'/result', 'w') as f:
-                    f.write('%.4f @ %05d'%(self.test_highscore, self.highscore_epoch))
+                    f.write('%70s %.4f @ %05d | curr: %05d\n'%(
+                        self.name,
+                        self.test_highscore,
+                        self.highscore_epoch,
+                        epoch))
                 print('<<<< %.4f @ %05d epoch >>>>' % (
                     self.test_highscore, self.highscore_epoch), file=log)
                 th.save(net.state_dict(), self.path+'/state_dict_highscore')

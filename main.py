@@ -50,19 +50,20 @@ if args.spectrogram is not None:
 
 use_cuda = torch.cuda.is_available()
 
+tokens = 'NAO'
 train_set = data_handler.DataSet(
     'data/train.csv',
     load=data_handler.load_composed,
     transformations=train_transformations,
     path='data/',
-    tokens='NAO~')
+    tokens=tokens)
 
 test_set = data_handler.DataSet(
     'data/test.csv',
     load=data_handler.load_composed,
     transformations=test_transformations,
     path='data/',
-    tokens='NAO~')
+    tokens=tokens)
 
 
 if args.equal_batch:
@@ -85,7 +86,7 @@ if use_cuda:
     cudnn.benchmark = True
 
 class_weight = [1.] * train_set.num_classes
-trainer = T.Trainer('saved/'+name, class_weight=class_weight, dryrun=args.debug)
+trainer = T.Trainer('ckpt/'+name, class_weight=class_weight, dryrun=args.debug)
 if args.debug:
     print(net)
 trainer(net, train_producer, test_producer, useAdam=True, epochs=1000)

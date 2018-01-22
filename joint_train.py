@@ -10,6 +10,11 @@ import sys, os
 import argparse
 
 
+seed = 42
+torch.manual_seed(seed)
+if torch.cuda.is_available:
+    torch.cuda.manual_seed_all(seed)
+
 parser = argparse.ArgumentParser(description='PyTorch AF-detector Training')
 parser.add_argument('--spectrogram', '-s', type=int, help='Use spectrogram with [NFFT]', required=True)
 parser.add_argument('--spectrogram_arch', help='Architecture to use on spectrogram feature extraction', required=True)
@@ -52,15 +57,19 @@ test_transformations = [
         })
 ]
 
-dataset = data_handler.DataSet(
-    'data/REFERENCE.csv', data_handler.load_forked,
+train_set = data_handler.DataSet(
+    'data/train.csv',
+    load=data_handler.load_forked,
+    transformations=train_transformations,
     path='data/',
-    remove_noise=True, tokens='NAO')
-train_set
-test_set
+    tokens='NAO')
 
-train_set.transformations = train_transformations
-test_set.transformations = test_transformations
+test_set = data_handler.DataSet(
+    'data/test.csv',
+    load=data_handler.load_forked,
+    transformations=test_transformations,
+    path='data/',
+    tokens='NAO')
 
 use_cuda = torch.cuda.is_available()
 
@@ -76,7 +85,7 @@ test_producer = torch.utils.data.DataLoader(
         dataset=test_set, batch_size=32, shuffle=True,
         num_workers=16, collate_fn=data_handler.batchify_forked)
 print("=> Loading time model %30s"%(args.time_arch))
-time_net = models.__dict__[args.time_arch](in_channels=1, num_classes=dataset.num_classes)
+time_net = models.__dict__[args.time_arch](in_channels=1, num_classes=train_set.num_classes)
 if args.time_ckpt is not None:
     time_net.load_state_dict(torch.load(args.time_ckpt))
 # classifier supression
@@ -84,7 +93,7 @@ time_net.classifier = torch.nn.Dropout(0)
 
 print("=> Loading spectrogram model %23s"%(args.spectrogram_arch))
 freq_net = models.__dict__[args.spectrogram_arch](
-    in_channels=args.spectrogram//2+1, num_classes=dataset.num_classes)
+    in_channels=args.spectrogram//2+1, num_classes=train_set.num_classes)
 if args.spectrogram_ckpt is not None:
     freq_net.load_state_dict(torch.load(args.spectrogram_ckpt))
 # classifier supression
@@ -97,17 +106,17 @@ if use_cuda:
 
 num_time_features = time_net.num_features
 num_freq_features = freq_net.num_features
-print('# Time features: %5d    # Spectrogram features: %5d'%(num_time_features, num_freq_features))
+print('# Time features: %5d\n# Spectrogram features: %5d'%(num_time_features, num_freq_features))
 num_features = num_time_features + num_freq_features
 classifier = torch.nn.Sequential(
-    torch.nn.AlphaDropout(0.8),
+    torch.nn.AlphaDropout(0.1),
     torch.nn.BatchNorm1d(num_features),
     torch.nn.SELU(),
     torch.nn.Conv1d(num_features, num_features, 1),
-    torch.nn.AlphaDropout(0.8),
+    torch.nn.AlphaDropout(0.05),
     torch.nn.BatchNorm1d(num_features),
     torch.nn.SELU(),
-    torch.nn.Conv1d(num_features, dataset.num_classes, 1),
+    torch.nn.Conv1d(num_features, train_set.num_classes, 1),
     torch.nn.AdaptiveAvgPool1d(1)
 )
 
@@ -123,7 +132,7 @@ net = models.ForkedModel(
 )
 
 
-trainer = T.Trainer('saved/'+name, class_weight=[1]*dataset.num_classes, dryrun=args.debug)
+trainer = T.Trainer('saved/'+name, class_weight=[1]*train_set.num_classes, dryrun=args.debug)
 if args.debug:
     print(net)
 trainer(net, train_producer, test_producer, useAdam=True, epochs=1200)

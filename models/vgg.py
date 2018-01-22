@@ -44,7 +44,7 @@ class VGG(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.classifier(x)
-        return x.squeeze()
+        return x.squeeze(-1)
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -66,7 +66,7 @@ def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False)
     dilated_factor=1
     def act_fn():
         return nn.SELU(inplace=True) if selu else nn.ReLU(inplace=True)
-    def drop_fn(p=0.3):
+    def drop_fn(p=0.2):
         return nn.AlphaDropout(p) if selu else nn.Dropout(p)
     for v in cfg:
         if v == 'M':
@@ -75,11 +75,11 @@ def make_layers(cfg, batch_norm=False, in_channels=1, dilated=False, selu=False)
         else:
             conv1d = nn.Conv1d(in_channels, v, kernel_size=3, padding=1,
                                dilation=dilated_factor)
-            dropout = drop_fn()
+            #dropout = drop_fn()
             if batch_norm:
-                layers += [conv1d, nn.BatchNorm1d(v), act_fn(), dropout]
+                layers += [conv1d, nn.BatchNorm1d(v), act_fn()]
             else:
-                layers += [conv1d, act_fn(), dropout]
+                layers += [conv1d, act_fn()]
             in_channels = v
             if dilated:
                 dilated_factor *= 2

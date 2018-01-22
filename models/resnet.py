@@ -198,7 +198,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.classifier(x)
-        return x.squeeze()
+        return x.squeeze(-1)
 
 
 def resnet18(pretrained=False, **kwargs):

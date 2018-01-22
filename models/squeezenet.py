@@ -84,7 +84,7 @@ class SqueezeNet(nn.Module):
         self.num_features = 512
         final_conv = nn.Conv1d(self.num_features, self.num_classes, kernel_size=1)
         self.classifier = nn.Sequential(
-            nn.Dropout(p=0.5),
+            nn.Dropout(p=0.2),
             final_conv,
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool1d(1)
@@ -102,7 +102,7 @@ class SqueezeNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.classifier(x)
-        return x.squeeze()
+        return x.squeeze(-1)
 
 
 def squeezenet1_0(pretrained=False, **kwargs):

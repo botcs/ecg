@@ -103,12 +103,12 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
 
         self.conv1 = nn.Conv1d(in_channels, self.inplanes, kernel_size=15,
-                               stride=1, padding=7, bias=False)
+                               stride=2, padding=7, bias=False)
         self.bn1 = nn.BatchNorm1d(self.inplanes)
         self.act = nn.SELU(inplace=True) if selu else nn.ReLU(inplace=True)
 
-        self.pool = nn.MaxPool1d(2)
-        self.conv2 = nn.Conv1d(self.inplanes, self.inplanes, kernel_size=15, stride=2, padding=7, bias=False)
+        self.pool = nn.MaxPool1d(2, ceil_mode=True)
+        self.conv2 = nn.Conv1d(self.inplanes, self.inplanes, kernel_size=15, stride=1, padding=7, bias=False)
         self.bn2 = nn.BatchNorm1d(self.inplanes)
         self.drop1 = nn.AlphaDropout() if selu else nn.Dropout()
         self.conv3 = nn.Conv1d(self.inplanes, self.inplanes, 15, padding=7, bias=False, dilation=self.dilation_factor)
@@ -172,7 +172,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.classifier(x)
-        return x.squeeze()
+        return x.squeeze(-1)
 
 def stanford_net(pretrained=False, **kwargs):
     model = ResNet(PreactBlock, [3, 4, 4, 4], **kwargs)

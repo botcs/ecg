@@ -78,10 +78,21 @@ class DataSet(th.utils.data.Dataset):
             A.update(random.sample(cl, int(len(cl) * ratio)))
         B = set(self.list) - A
 
-        A = DataSet(A, self.load, self.path, self.remove_unlisted,
-                    self.tokens, self.equal_batch, self.transformations)
-        B = DataSet(B, self.load, self.path, self.remove_unlisted,
-                    self.tokens, self.equal_batch, self.transformations)
+        A = DataSet(
+            elems=A,
+            load=self.load,
+            path=self.path,
+            tokens=self.tokens,
+            equal_batch=self.equal_batch,
+            transformations=self.transformations)
+
+        B = DataSet(
+            elems=B, 
+            load=self.load,
+            path=self.path,
+            tokens=self.tokens,
+            equal_batch=self.equal_batch,
+            transformations=self.transformations)
         return A, B
 
     def save(self, fname):
